@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//myvatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="red.mlz.console.module.goods.mapper.GoodsMapper">
+
+    <select id="getAll"
+            resultType = "red.mlz.common.module.goods.entity.Goods">
+
+        SELECT * from goods where is_deleted = 0
+        <if test="title != null and title !=''">
+            AND (   title LIKE CONCAT('%',#{title},'%')
+            <if test="ids != null and ids != ''">OR category_id IN (${ids})
+
+             </if>
+                )
+        </if>
+        ORDER BY id LIMIT #{offset},#{limit}
+
+    </select>
+
+    <!--    获取商品总数  -->
+    <select id="getGoodsTotalForConsole" resultType="Integer">
+        select count(*) from goods where is_deleted = 0
+        <if test="title != null and title != ''">and title like CONCAT('%',#{title},'%')</if>
+    </select>
+
+
+    <!--    连表sql   -->
+    <select id="getGoodsDtoAll" resultType="red.mlz.common.module.goods.dto.GoodsDTO">
+        SELECT g.id AS id, g.category_id AS categoryId, g.title AS title, c.name AS categoryName,
+        g.goods_images AS goodsImages, g.price AS price, g.sales AS sales
+        FROM goods g
+        LEFT JOIN category c ON g.category_id = c.id
+        WHERE g.is_deleted = 0
+        <if test="title != null and title != ''">
+            AND (g.title LIKE CONCAT('%', #{title}, '%') OR c.name LIKE CONCAT('%', #{title}, '%'))
+        </if>
+        ORDER BY g.id
+        LIMIT #{offset}, #{limit}
+
+    </select>
+
+
+
+
+    <insert id="insert"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            parameterType="red.mlz.common.module.goods.entity.Goods">
+        insert into goods (
+        <if test="goods.categoryId != null and goods.categoryId !=''">category_id,</if>
+        <if test="goods.title != null and goods.title !=''">title,</if>
+        <if test="goods.goodsImages != null and goods.goodsImages !=''">goods_images,</if>
+        <if test="goods.sales != null and goods.sales !=''">sales,</if>
+        <if test="goods.goodsName != null and goods.goodsName !=''">goods_name,</if>
+        <if test="goods.price != null and goods.price !=''">price,</if>
+        <if test="goods.source != null and goods.source !=''">source,</if>
+        <if test="goods.sevenDayReturn != null and goods.sevenDayReturn !=''">seven_day_return,</if>
+        <if test="goods.goodsDetails != null and goods.goodsDetails !=''">goods_details,</if>
+        <if test="goods.createdTime != null and goods.createdTime !=''">created_time,</if>
+        <if test="goods.updatedTime != null and goods.updatedTime !=''">updated_time,</if>
+        is_deleted)
+        values (
+        <if test="goods.categoryId != null and goods.categoryId !=''">#{goods.categoryId},</if>
+        <if test="goods.title != null and goods.title !=''">#{goods.title},</if>
+        <if test="goods.goodsImages != null and goods.goodsImages !=''">#{goods.goodsImages},</if>
+        <if test="goods.sales != null and goods.sales !=''">#{goods.sales},</if>
+        <if test="goods.goodsName != null and goods.goodsName !=''">#{goods.goodsName},</if>
+        <if test="goods.price != null and goods.price !=''">#{goods.price},</if>
+        <if test="goods.source != null and goods.source !=''">#{goods.source},</if>
+        <if test="goods.sevenDayReturn != null and goods.sevenDayReturn !=''">#{goods.sevenDayReturn},</if>
+        <if test="goods.goodsDetails != null and goods.goodsDetails !=''">#{goods.goodsDetails},</if>
+        <if test="goods.createdTime != null ">#{goods.createdTime},</if>
+        <if test="goods.updatedTime != null ">#{goods.updatedTime},</if>
+        #{goods.isDeleted}
+        )
+    </insert>
+
+    <update id="update"
+            parameterType="red.mlz.common.module.goods.entity.Goods">
+        update goods set id = #{goods.id}
+        <if test="goods.categoryId != null and goods.categoryId !=''">,category_id =  #{goods.categoryId}</if>
+        <if test="goods.title != null and goods.title !=''">,title =  #{goods.title}</if>
+        <if test="goods.goodsImages != null and goods.goodsImages !=''">,goods_images = #{goods.goodsImages}</if>
+        <if test="goods.sales != null and goods.sales !=''">,sales =#{goods.sales}</if>
+        <if test="goods.goodsName != null and goods.goodsName !=''">,goods_name = #{goods.goodsName}</if>
+        <if test="goods.price != null and goods.price !=''">,price = #{goods.price}</if>
+        <if test="goods.source != null and goods.source !=''">,source = #{goods.source}</if>
+        <if test="goods.sevenDayReturn!= null and goods.sevenDayReturn !=''">,seven_day_return = #{goods.sevenDayReturn}</if>
+        <if test="goods.goodsDetails != null and goods.goodsDetails !=''">,goods_details = #{goods.goodsDetails}</if>
+        <if test="goods.updatedTime != null and goods.updatedTime !=''">,updated_time = #{goods.updatedTime}</if>
+        where id = #{goods.id}
+    </update>
+
+</mapper>

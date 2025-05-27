@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="red.mlz.app.module.goods_tag_relation.mapper.GoodsTagRelationMapper">
+
+    <!-- 插入操作 -->
+    <insert id="insert"
+            parameterType="red.mlz.common.module.goods_tag_relation.entity.GoodsTagRelation">
+        insert into goods_tag_relation (
+        <if test="goodsTagRelation.goodsId != null">goods_id,</if>
+        <if test="goodsTagRelation.tagId != null">tag_id,</if>
+        <if test="goodsTagRelation.createdTime != null">created_time,</if>
+        <if test="goodsTagRelation.updatedTime != null">updated_time,</if>
+        is_deleted
+        )
+        values (
+        <if test="goodsTagRelation.goodsId != null">#{goodsTagRelation.goodsId},</if>
+        <if test="goodsTagRelation.tagId != null">#{goodsTagRelation.tagId},</if>
+        <if test="goodsTagRelation.createdTime != null">#{goodsTagRelation.createdTime},</if>
+        <if test="goodsTagRelation.updatedTime != null">#{goodsTagRelation.updatedTime},</if>
+        #{goodsTagRelation.isDeleted}
+        )
+    </insert>
+
+    <!-- 更新操作 -->
+    <update id="update"
+            parameterType="red.mlz.common.module.goods_tag_relation.entity.GoodsTagRelation">
+        update goods_tag_relation
+        <set>
+            <if test="goodsTagRelation.goodsId != null">goods_id = #{goodsTagRelation.goodsId},</if>
+            <if test="goodsTagRelation.tagId != null">tag_id = #{goodsTagRelation.tagId},</if>
+            <if test="goodsTagRelation.createdTime != null">created_time = #{goodsTagRelation.createdTime},</if>
+            <if test="goodsTagRelation.updatedTime != null">updated_time = #{goodsTagRelation.updatedTime},</if>
+            <if test="goodsTagRelation.isDeleted != null">is_deleted = #{goodsTagRelation.isDeleted},</if>
+        </set>
+        where id = #{goodsTagRelation.id}
+    </update>
+
+
+
+
+</mapper>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="red.mlz.app.module.sms_crond.mapper.SmsForbidMapper">
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="red.mlz.common.module.sms_crond.entity.SmsForbid">
+        insert into sms_forbid (
+        <if test="smsForbid.phone != null and smsForbid.phone != ''">phone,</if>
+        <if test="smsForbid.beginTime != null">begin_time,</if>
+        <if test="smsForbid.endTime != null">end_time,</if>
+        <if test="smsForbid.createTime != null">create_time,</if>
+        <if test="smsForbid.updateTime != null">update_time,</if>
+        is_deleted
+        )
+        values (
+        <if test="smsForbid.phone != null and smsForbid.phone != ''">#{smsForbid.phone},</if>
+        <if test="smsForbid.beginTime != null">#{smsForbid.beginTime},</if>
+        <if test="smsForbid.endTime != null">#{smsForbid.endTime},</if>
+        <if test="smsForbid.createTime != null">#{smsForbid.createTime},</if>
+        <if test="smsForbid.updateTime != null">#{smsForbid.updateTime},</if>
+        #{smsCrond.isDeleted}
+        )
+    </insert>
+
+    <!-- 更新操作 -->
+    <update id="update" parameterType="red.mlz.common.module.sms_crond.entity.SmsForbid">
+        update sms_forbid
+        set id =  #{smsForbid.id}
+        <if test="smsForbid.phone != null and smsForbid.phone != ''">,phone = #{smsForbid.phone}</if>
+            <if test="smsForbid.beginTime != null">,begin_time = #{smsForbid.beginTime}</if>
+            <if test="smsForbid.endTime != null">,end_time = #{smsForbid.endTime}</if>
+            <if test="smsForbid.createTime != null">,create_time = #{smsForbid.createTime}</if>
+            <if test="smsForbid.updateTime != null">,update_time = #{smsForbid.updateTime}</if>
+        where id = #{smsForbid.id}
+    </update>
+
+</mapper>

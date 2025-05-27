@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="red.mlz.app.module.sms_crond.mapper.SmsUseMapper">
+
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="red.mlz.common.module.sms_crond.entity.SmsUse">
+        insert into sms_use (
+        <if test="smsUse.phone != null and smsUse.phone != ''">phone,</if>
+        <if test="smsUse.year != null">year,</if>
+        <if test="smsUse.month != null">month,</if>
+        <if test="smsUse.day != null">day,</if>
+        <if test="smsUse.hour != null">hour,</if>
+        <if test="smsUse.minute != null">minute,</if>
+        <if test="smsUse.count != null">count,</if>
+        <if test="smsUse.createTime != null">create_time,</if>
+        <if test="smsUse.updateTime != null">update_time,</if>
+        is_deleted
+        )
+        values (
+        <if test="smsUse.phone != null and smsUse.phone != ''">#{smsUse.phone},</if>
+        <if test="smsUse.year != null">#{smsUse.year},</if>
+        <if test="smsUse.month != null">#{smsUse.month},</if>
+        <if test="smsUse.day != null">#{smsUse.day},</if>
+        <if test="smsUse.hour != null">#{smsUse.hour},</if>
+        <if test="smsUse.minute != null">#{smsUse.minute},</if>
+        <if test="smsUse.count != null">#{smsUse.count},</if>
+        <if test="smsUse.createTime != null">#{smsUse.createTime},</if>
+        <if test="smsUse.updateTime != null">#{smsUse.updateTime},</if>
+        0
+        )
+    </insert>
+
+    <!-- 更新操作 -->
+    <update id="update" parameterType="red.mlz.common.module.sms_crond.entity.SmsUse">
+        update sms_use
+        set id = #{smsUse.id}
+            <if test="smsUse.phone != null and smsUse.phone != ''">,phone = #{smsUse.phone}</if>
+            <if test="smsUse.year != null">,year = #{smsUse.year}</if>
+            <if test="smsUse.month != null">,month = #{smsUse.month}</if>
+            <if test="smsUse.day != null">,day = #{smsUse.day}</if>
+            <if test="smsUse.hour != null">,hour = #{smsUse.hour}</if>
+            <if test="smsUse.minute != null">,minute = #{smsUse.minute}</if>
+            <if test="smsUse.count != null">,count = #{smsUse.count}</if>
+            <if test="smsUse.createTime != null">,create_time = #{smsUse.createTime}</if>
+            <if test="smsUse.updateTime != null">,update_time = #{smsUse.updateTime}</if>
+        where id = #{smsUse.id}
+    </update>
+
+</mapper>
+
+
+
+
+
+
+
+

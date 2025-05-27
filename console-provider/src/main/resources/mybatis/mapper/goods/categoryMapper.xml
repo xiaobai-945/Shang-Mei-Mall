@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="red.mlz.console.module.goods.mapper.CategoryMapper">    <!-- 插入操作 -->
+
+
+    <insert id="insert"
+            parameterType="red.mlz.common.module.goods.entity.Category">
+        insert into category (
+            <if test="category.parentId != null and category.parentId !=''">parent_id,</if>
+            <if test="category.name != null and category.name !=''">name,</if>
+            <if test="category.image != null and category.image !=''">image,</if>
+            <if test="category.createdTime != null and category.createdTime !=''">created_time,</if>
+            <if test="category.updatedTime != null and category.updatedTime !=''">updated_time,</if>
+            is_deleted
+        )
+        values (
+            <if test="category.parentId != null and category.parentId !=''">#{category.parentId},</if>
+            <if test="category.name != null and category.name !=''">#{category.name},</if>
+            <if test="category.image != null and category.image !=''">#{category.image},</if>
+            <if test="category.createdTime != null and category.createdTime !=''">#{category.createdTime},</if>
+            <if test="category.updatedTime != null and category.updatedTime !=''">#{category.updatedTime},</if>
+            #{category.isDeleted}
+        )
+    </insert>
+
+    <!-- 更新操作 -->
+    <update id="update" parameterType="red.mlz.common.module.goods.entity.Category">
+        update category set id = #{category.id}
+            <if test="category.name != null and category.name !=''">,name = #{category.name}</if>
+            <if test="category.image != null and category.image !=''">,image = #{category.image}</if>
+            <if test="category.updatedTime != null and category.updatedTime !=''">,updated_time = #{category.updatedTime}</if>
+            where id = #{category.id}
+
+
+    </update>
+
+
+</mapper>

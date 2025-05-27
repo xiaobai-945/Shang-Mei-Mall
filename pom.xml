@@ -1,0 +1,51 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>red.mlz</groupId>
+  <artifactId>mlz-red-server-cloud</artifactId>
+  <packaging>pom</packaging>
+
+  <modules>
+    <module>eureka-server</module>
+    <module>common</module>
+    <module>app-provider</module>
+    <module>console-provider</module>
+<!--    <module>auth-provider</module>-->
+    <module>app-consumer</module>
+    <module>console-consumer</module>
+<!--    <module>auth-consumer</module>-->
+  </modules>
+
+  <version>1.0-SNAPSHOT</version>
+  <name>mlz-red-server-cloud Maven Webapp</name>
+  <url>http://maven.apache.org</url>
+
+  <properties>
+    <spring-cloud.version>2021.0.9</spring-cloud.version>
+    <java.version>8</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>2.7.5</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+
+  </dependencyManagement>
+  <build>
+    <finalName>mlz-red-server-cloud</finalName>
+  </build>
+</project>

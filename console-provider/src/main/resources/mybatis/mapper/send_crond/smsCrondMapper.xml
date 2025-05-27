@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="red.mlz.console.module.sms_crond.mapper.SmsCrondMapper">
+
+    <!-- 插入操作 -->
+    <insert id="insert" parameterType="red.mlz.common.module.sms_crond.entity.SmsCrond">
+        insert into sms_crond (
+        <if test="smsCrond.phone != null and smsCrond.phone != ''">phone,</if>
+        <if test="smsCrond.sendTime != null">send_time,</if>
+        <if test="smsCrond.content != null and smsCrond.content != ''">content,</if>
+        <if test="smsCrond.status != null">status,</if>
+        <if test="smsCrond.result != null and smsCrond.result != ''">result,</if>
+        <if test="smsCrond.createdTime != null">created_time,</if>
+        <if test="smsCrond.updatedTime != null">updated_time,</if>
+       is_deleted
+        )
+        values (
+        <if test="smsCrond.phone != null and smsCrond.phone != ''">#{smsCrond.phone},</if>
+        <if test="smsCrond.sendTime != null">#{smsCrond.sendTime},</if>
+        <if test="smsCrond.content != null and smsCrond.content != ''">#{smsCrond.content},</if>
+        <if test="smsCrond.status != null">#{smsCrond.status},</if>
+        <if test="smsCrond.result != null and smsCrond.result != ''">#{smsCrond.result},</if>
+        <if test="smsCrond.createdTime != null">#{smsCrond.createdTime},</if>
+        <if test="smsCrond.updatedTime != null">#{smsCrond.updatedTime},</if>
+        #{smsCrond.isDeleted}
+        )
+    </insert>
+
+    <!-- 更新操作 -->
+    <update id="update" parameterType="red.mlz.common.module.sms_crond.entity.SmsCrond">
+        update sms_crond
+        set id =  #{smsCrond.id}
+        <if test="smsCrond.phone != null and smsCrond.phone != ''">,phone = #{smsCrond.phone}</if>
+        <if test="smsCrond.sendTime != null">,send_time = #{smsCrond.sendTime}</if>
+        <if test="smsCrond.content != null and smsCrond.content != ''">,content = #{smsCrond.content}</if>
+        <if test="smsCrond.status != null">,status = #{smsCrond.status}</if>
+        <if test="smsCrond.result != null and smsCrond.result != ''">,result = #{smsCrond.result}</if>
+        <if test="smsCrond.updatedTime != null">,updated_time = #{smsCrond.updatedTime}</if>
+        <if test="smsCrond.isDeleted != null">,is_deleted = #{smsCrond.isDeleted}</if>
+        where id = #{smsCrond.id}
+    </update>
+
+</mapper>
