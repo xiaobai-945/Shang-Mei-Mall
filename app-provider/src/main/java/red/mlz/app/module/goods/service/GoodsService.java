@@ -2,6 +2,15 @@ package red.mlz.app.module.goods.service;
 
 
 import com.alibaba.fastjson.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -21,9 +30,12 @@ import red.mlz.common.module.tag.entity.Tag;
 import red.mlz.common.utils.BaseUtils;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class GoodsService {
@@ -37,6 +49,9 @@ public class GoodsService {
     private GoodsTagRelationService relationService;
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    @Resource
+    private RestHighLevelClient client;
 
     // 商品详情
     @Transactional
@@ -52,29 +67,84 @@ public class GoodsService {
     }
 
 
-    // 商品列表
     @ReadOnly
     public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
         // 获取符合类目的 category_id 列表
         List<BigInteger> categoryIds = categoryService.selectIdByTitle(title);
 
-        // StringBuilder 拼接 ID 列表
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < categoryIds.size(); i++) {
-            sb.append(categoryIds.get(i));
-            if (i < categoryIds.size() - 1) {
-                sb.append(",");  // 逗号分隔
-            }
+        // 如果没有符合条件的类目，直接返回空列表
+        if (categoryIds == null || categoryIds.isEmpty()) {
+            return Collections.emptyList();
         }
-        // 获取拼接字符串-ids
-        String ids = sb.toString();
 
-        // System.out.println(ids);
 
+        List<String> categoryIdStrings = categoryIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.toList());
+
+        // 计算分页的偏移量
         int offset = (page - 1) * pageSize;
 
-        return goodsMapper.getAll(title, offset, pageSize, ids);
+        // 创建 Elasticsearch 查询请求
+        SearchRequest searchRequest = new SearchRequest("goods_index");
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+
+        // 构建查询条件：根据 category_id 和 title 进行筛选
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
+                .must(QueryBuilders.termsQuery("categoryId", categoryIdStrings))  // 匹配 categoryId
+                .should(QueryBuilders.matchQuery("title", title));  // 根据 title 进行模糊匹配
+
+        // 分页设置：from (偏移量) 和 size (每页数据量)
+        searchSourceBuilder.query(boolQuery)
+                .from(offset)   // 偏移量
+                .size(pageSize); // 每页数量
+
+        searchRequest.source(searchSourceBuilder);
+
+        // 执行查询
+        SearchResponse searchResponse;
+        try {
+            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Collections.emptyList();  // 如果查询失败，返回空列表
+        }
+
+        // 处理查询结果并将其转换为 Goods 对象列表
+        List<Goods> goodsList = new ArrayList<>();
+        for (SearchHit hit : searchResponse.getHits()) {
+            // 将 Elasticsearch 返回的 JSON 文档转换为 Goods 对象
+            Goods goods = new ObjectMapper().convertValue(hit.getSourceAsMap(), Goods.class);
+            goodsList.add(goods);
+        }
+
+        return goodsList;
     }
+
+
+    // 商品列表
+//    @ReadOnly
+//    public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
+//        // 获取符合类目的 category_id 列表
+//        List<BigInteger> categoryIds = categoryService.selectIdByTitle(title);
+//
+//        // StringBuilder 拼接 ID 列表
+//        StringBuilder sb = new StringBuilder();
+//        for (int i = 0; i < categoryIds.size(); i++) {
+//            sb.append(categoryIds.get(i));
+//            if (i < categoryIds.size() - 1) {
+//                sb.append(",");  // 逗号分隔
+//            }
+//        }
+//        // 获取拼接字符串-ids
+//        String ids = sb.toString();
+//
+//        // System.out.println(ids);
+//
+//        int offset = (page - 1) * pageSize;
+//
+//        return goodsMapper.getAll(title, offset, pageSize, ids);
+//    }
 
 
     // 商品列表(连表方式）
