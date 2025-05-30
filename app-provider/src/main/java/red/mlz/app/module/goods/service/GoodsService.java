@@ -77,10 +77,16 @@ public class GoodsService {
             return Collections.emptyList();
         }
 
-
-        List<String> categoryIdStrings = categoryIds.stream()
-                .map(String::valueOf)
-                .collect(Collectors.toList());
+        // 使用 StringBuilder 拼接 ID 列表
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < categoryIds.size(); i++) {
+            sb.append(categoryIds.get(i));
+            if (i < categoryIds.size() - 1) {
+                sb.append(",");  // 逗号分隔
+            }
+        }
+        // 获取拼接字符串-ids
+        String ids = sb.toString();
 
         // 计算分页的偏移量
         int offset = (page - 1) * pageSize;
@@ -89,9 +95,9 @@ public class GoodsService {
         SearchRequest searchRequest = new SearchRequest("goods_index");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
 
-        // 构建查询条件：根据 category_id 和 title 进行筛选
+        // 构建查询条件：根据 categoryId 和 title 进行筛选
         BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
-                .must(QueryBuilders.termsQuery("categoryId", categoryIdStrings))  // 匹配 categoryId
+                .must(QueryBuilders.termsQuery("categoryId", ids))  // 匹配 categoryId
                 .should(QueryBuilders.matchQuery("title", title));  // 根据 title 进行模糊匹配
 
         // 分页设置：from (偏移量) 和 size (每页数据量)
@@ -101,7 +107,7 @@ public class GoodsService {
 
         searchRequest.source(searchSourceBuilder);
 
-        // 执行查询
+        // 执行 Elasticsearch 查询
         SearchResponse searchResponse;
         try {
             searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
@@ -118,9 +124,13 @@ public class GoodsService {
             goodsList.add(goods);
         }
 
+        // 如果 Elasticsearch 返回的商品列表为空，回退到数据库查询
+        if (goodsList.isEmpty()) {
+            return goodsMapper.getAll(title, offset, pageSize, ids);  // 从数据库查询
+        }
+
         return goodsList;
     }
-
 
     // 商品列表
 //    @ReadOnly
