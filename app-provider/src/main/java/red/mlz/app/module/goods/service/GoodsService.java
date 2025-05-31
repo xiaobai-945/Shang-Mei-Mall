@@ -69,69 +69,81 @@ public class GoodsService {
 
     @ReadOnly
     public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
-        // 获取符合类目的 category_id 列表
-        List<BigInteger> categoryIds = categoryService.selectIdByTitle(title);
-
-        // 如果没有符合条件的类目，直接返回空列表
-        if (categoryIds == null || categoryIds.isEmpty()) {
+        if (BaseUtils.isEmpty(title)) {
+            // 如果搜索关键词为空，返回空或者全量可以根据业务调整，这里先返回空
             return Collections.emptyList();
         }
 
-        // 使用 StringBuilder 拼接 ID 列表
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < categoryIds.size(); i++) {
-            sb.append(categoryIds.get(i));
-            if (i < categoryIds.size() - 1) {
-                sb.append(",");  // 逗号分隔
-            }
-        }
-        // 获取拼接字符串-ids
-        String ids = sb.toString();
-
-        // 计算分页的偏移量
-        int offset = (page - 1) * pageSize;
-
-        // 创建 Elasticsearch 查询请求
-        SearchRequest searchRequest = new SearchRequest("goods_index");
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-
-        // 构建查询条件：根据 categoryId 和 title 进行筛选
-        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery()
-                .must(QueryBuilders.termsQuery("categoryId", ids))  // 匹配 categoryId
-                .should(QueryBuilders.matchQuery("title", title));  // 根据 title 进行模糊匹配
-
-        // 分页设置：from (偏移量) 和 size (每页数据量)
-        searchSourceBuilder.query(boolQuery)
-                .from(offset)   // 偏移量
-                .size(pageSize); // 每页数量
-
-        searchRequest.source(searchSourceBuilder);
-
-        // 执行 Elasticsearch 查询
-        SearchResponse searchResponse;
+        // 1. 先用 ES 分类索引匹配分类名，获取匹配的分类ID列表
+        List<BigInteger> categoryIds = new ArrayList<>();
         try {
-            searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            SearchRequest categorySearchRequest = new SearchRequest("category_index");
+            SearchSourceBuilder categorySourceBuilder = new SearchSourceBuilder();
+
+            categorySourceBuilder.query(QueryBuilders.matchQuery("name", title));
+
+            categorySourceBuilder.size(100);  // 最大返回数量，可根据业务调整
+
+            categorySearchRequest.source(categorySourceBuilder);
+
+            SearchResponse categoryResponse = client.search(categorySearchRequest, RequestOptions.DEFAULT);
+
+            for (SearchHit hit : categoryResponse.getHits()) {
+                Object idObj = hit.getSourceAsMap().get("id");
+                if (idObj != null) {
+                    if (idObj instanceof Number) {
+                        categoryIds.add(BigInteger.valueOf(((Number) idObj).longValue()));
+                    } else {
+                        categoryIds.add(new BigInteger(idObj.toString()));
+                    }
+                }
+            }
         } catch (IOException e) {
             e.printStackTrace();
-            return Collections.emptyList();  // 如果查询失败，返回空列表
+            return Collections.emptyList();
         }
 
-        // 处理查询结果并将其转换为 Goods 对象列表
+        // 2. 如果没有找到匹配的分类，直接返回空
+        if (categoryIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        // 3. 计算分页偏移量
+        int offset = (page - 1) * pageSize;
+
+        // 4. 构建商品索引的搜索请求
         List<Goods> goodsList = new ArrayList<>();
-        for (SearchHit hit : searchResponse.getHits()) {
-            // 将 Elasticsearch 返回的 JSON 文档转换为 Goods 对象
-            Goods goods = new ObjectMapper().convertValue(hit.getSourceAsMap(), Goods.class);
-            goodsList.add(goods);
-        }
+        try {
+            SearchRequest goodsSearchRequest = new SearchRequest("goods_index");
+            SearchSourceBuilder goodsSourceBuilder = new SearchSourceBuilder();
 
-        // 如果 Elasticsearch 返回的商品列表为空，回退到数据库查询
-        if (goodsList.isEmpty()) {
-            return goodsMapper.getAll(title, offset, pageSize, ids);  // 从数据库查询
+            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+            boolQuery.must(QueryBuilders.termsQuery("categoryId", categoryIds)); // 分类ID过滤
+
+            // 关键词匹配商品标题或分类名，至少匹配一个
+            boolQuery.should(QueryBuilders.matchQuery("title", title));
+            boolQuery.should(QueryBuilders.matchQuery("categoryName", title));
+            boolQuery.minimumShouldMatch(1);
+
+            goodsSourceBuilder.query(boolQuery);
+            goodsSourceBuilder.from(offset);
+            goodsSourceBuilder.size(pageSize);
+
+            goodsSearchRequest.source(goodsSourceBuilder);
+
+            SearchResponse goodsResponse = client.search(goodsSearchRequest, RequestOptions.DEFAULT);
+
+            ObjectMapper mapper = new ObjectMapper();
+            for (SearchHit hit : goodsResponse.getHits()) {
+                Goods goods = mapper.convertValue(hit.getSourceAsMap(), Goods.class);
+                goodsList.add(goods);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return Collections.emptyList();
         }
 
         return goodsList;
     }
-
     // 商品列表
 //    @ReadOnly
 //    public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
