@@ -69,12 +69,8 @@ public class GoodsService {
 
     @ReadOnly
     public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
-        if (BaseUtils.isEmpty(title)) {
-            // 如果搜索关键词为空，返回空或者全量可以根据业务调整，这里先返回空
-            return Collections.emptyList();
-        }
 
-        // 1. 先用 ES 分类索引匹配分类名，获取匹配的分类ID列表
+        // 用 ES 分类索引匹配分类名，获取匹配的分类ID列表
         List<BigInteger> categoryIds = new ArrayList<>();
         try {
             SearchRequest categorySearchRequest = new SearchRequest("category_index");
@@ -103,14 +99,14 @@ public class GoodsService {
             return Collections.emptyList();
         }
 
-        // 2. 如果没有找到匹配的分类，直接返回空
+        // 如果没有找到匹配的分类，直接返回空
         if (categoryIds.isEmpty()) {
             return Collections.emptyList();
         }
-        // 3. 计算分页偏移量
+        // 计算分页偏移量
         int offset = (page - 1) * pageSize;
 
-        // 4. 构建商品索引的搜索请求
+        // 构建商品索引的搜索请求
         List<Goods> goodsList = new ArrayList<>();
         try {
             SearchRequest goodsSearchRequest = new SearchRequest("goods_index");
