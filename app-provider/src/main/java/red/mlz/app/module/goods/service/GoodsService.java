@@ -73,11 +73,11 @@ public class GoodsService {
     @ReadOnly
     public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
 
-        if (BaseUtils.isEmpty(title)) {
-            // 如果搜索关键词为空，返回前10条数据
-            int offset = (page - 1) * pageSize;
-            return goodsMapper.getAllForESPaged(offset, pageSize);
-        }
+//        if (BaseUtils.isEmpty(title)) {
+//            // 如果搜索关键词为空，返回前10条数据
+//            int offset = (page - 1) * pageSize;
+//            return goodsMapper.getAllForESPaged(offset, pageSize);
+//        }
 
         // 1. 计算分页偏移量
         int offset = (page - 1) * pageSize;
