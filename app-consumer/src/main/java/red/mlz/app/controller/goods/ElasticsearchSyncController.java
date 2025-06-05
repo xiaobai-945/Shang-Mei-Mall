@@ -17,7 +17,7 @@ public class ElasticsearchSyncController {
     /**
      * 手动同步所有商品数据到ES
      */
-    @RequestMapping("/sync/all")
+    @RequestMapping("es/sync/all")
     public Response syncAllGoods() {
         try {
             elasticsearchSyncService.syncAllGoods();
@@ -31,7 +31,7 @@ public class ElasticsearchSyncController {
     /**
      * 初始化ES索引
      */
-    @RequestMapping("/init")
+    @RequestMapping("es/init")
     public Response initIndex() {
         try {
             elasticsearchSyncService.initIndex();
@@ -45,7 +45,7 @@ public class ElasticsearchSyncController {
     /**
      * 检查ES连接状态
      */
-    @RequestMapping("/status")
+    @RequestMapping("es/status")
     public Response checkStatus() {
         try {
             boolean isAvailable = elasticsearchSyncService.checkStatus();

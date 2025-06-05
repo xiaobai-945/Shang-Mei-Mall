@@ -16,6 +16,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.DefaultTransactionDefinition;
+import red.mlz.app.module.es.ElasticsearchSyncService;
 import red.mlz.app.module.goods.mapper.GoodsMapper;
 import red.mlz.app.module.goods_tag_relation.service.GoodsTagRelationService;
 import red.mlz.app.module.tag.service.TagService;

@@ -1,4 +1,4 @@
-package red.mlz.app.module.goods.service;
+package red.mlz.app.module.es;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.elasticsearch.action.bulk.BulkRequest;
@@ -11,6 +11,7 @@ import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.xcontent.XContentType;
 import org.springframework.stereotype.Service;
 import red.mlz.app.module.goods.mapper.GoodsMapper;
+import red.mlz.app.module.goods.service.CategoryService;
 import red.mlz.common.module.goods.dto.GoodsSearchDoc;
 import red.mlz.common.module.goods.entity.Category;
 import red.mlz.common.module.goods.entity.Goods;
@@ -59,7 +60,7 @@ public class ElasticsearchSyncService {
         boolean exists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
         
         if (!exists) {
-            // 创建索引 (ES 7.x方式)
+            // 创建索引 (es 7.x方式)
             CreateIndexRequest createIndexRequest = new CreateIndexRequest(GOODS_INDEX);
             String mapping = getGoodsIndexMapping();
             createIndexRequest.mapping(mapping, XContentType.JSON);
@@ -70,7 +71,7 @@ public class ElasticsearchSyncService {
     }
     
     /**
-     * 获取商品索引映射 (ES 7.x格式)
+     * 获取商品索引映射 (es 7.x格式)
      */
     private String getGoodsIndexMapping() {
         return "{\n" +

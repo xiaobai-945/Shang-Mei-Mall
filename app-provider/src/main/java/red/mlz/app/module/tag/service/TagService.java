@@ -102,7 +102,7 @@ public class TagService {
                 .map(relation -> relation.getTagId().toString())
                 .collect(Collectors.toList());
 
-        // 构建 ES 查询
+        // 构建 es 查询
         SearchRequest request = new SearchRequest("tags");  // ES索引名
         TermsQueryBuilder query = new TermsQueryBuilder("id", tagIds);
         SearchSourceBuilder builder = new SearchSourceBuilder()

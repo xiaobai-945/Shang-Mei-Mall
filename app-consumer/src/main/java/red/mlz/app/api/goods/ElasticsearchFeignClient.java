@@ -10,19 +10,19 @@ public interface ElasticsearchFeignClient {
     /**
      * 手动同步所有商品数据到ES
      */
-    @RequestMapping("/sync/all")
+    @RequestMapping("es/sync/all")
     void syncAllGoods();
 
     /**
      * 初始化ES索引
      */
-    @RequestMapping("/init")
+    @RequestMapping("es/init")
     void initIndex();
 
     /**
      * 检查ES连接状态
      */
-    @RequestMapping("/status")
+    @RequestMapping("es/status")
     boolean checkStatus();
 
 
