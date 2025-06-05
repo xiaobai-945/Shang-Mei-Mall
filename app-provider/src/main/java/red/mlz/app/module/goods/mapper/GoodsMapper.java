@@ -43,4 +43,13 @@ public interface GoodsMapper  {
     @Update("update goods set is_deleted = 1,updated_time = #{time} where category_id=#{category_id} limit 1")
     int deleteCategory(@Param("category_id") BigInteger id, @Param("time") Integer time);
 
+
+    // 获取所有商品数据用于ES同步
+    @Select("select * from goods")
+    List<Goods> getAllForES();
+
+    // 分页获取商品数据
+    @Select("select * from goods where is_deleted = 0 order by created_time desc limit #{offset}, #{limit}")
+    List<Goods> getAllForESPaged(@Param("offset") int offset, @Param("limit") int limit);
+
 }

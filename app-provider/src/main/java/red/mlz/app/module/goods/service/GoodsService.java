@@ -11,7 +11,6 @@ import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -26,8 +25,8 @@ import red.mlz.common.module.goods.entity.Category;
 import red.mlz.common.module.goods.entity.Goods;
 import red.mlz.common.module.goods.request.GoodsContentDto;
 import red.mlz.common.module.tag.entity.Tag;
-
 import red.mlz.common.utils.BaseUtils;
+
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -35,7 +34,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class GoodsService {
@@ -47,11 +45,14 @@ public class GoodsService {
     private TagService tagService;
     @Resource
     private GoodsTagRelationService relationService;
-    @Autowired
+    @Resource
     private PlatformTransactionManager transactionManager;
 
     @Resource
     private RestHighLevelClient client;
+
+    @Resource
+    private ElasticsearchSyncService elasticsearchSyncService;
 
     // 商品详情
     @Transactional
@@ -67,62 +68,48 @@ public class GoodsService {
     }
 
 
+
     @ReadOnly
     public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
 
-        // 用 ES 分类索引匹配分类名，获取匹配的分类ID列表
-        List<BigInteger> categoryIds = new ArrayList<>();
-        try {
-            SearchRequest categorySearchRequest = new SearchRequest("category_index");
-            SearchSourceBuilder categorySourceBuilder = new SearchSourceBuilder();
-
-            categorySourceBuilder.query(QueryBuilders.matchQuery("name", title));
-
-            categorySourceBuilder.size(100);  // 最大返回数量，可根据业务调整
-
-            categorySearchRequest.source(categorySourceBuilder);
-
-            SearchResponse categoryResponse = client.search(categorySearchRequest, RequestOptions.DEFAULT);
-
-            for (SearchHit hit : categoryResponse.getHits()) {
-                Object idObj = hit.getSourceAsMap().get("id");
-                if (idObj != null) {
-                    if (idObj instanceof Number) {
-                        categoryIds.add(BigInteger.valueOf(((Number) idObj).longValue()));
-                    } else {
-                        categoryIds.add(new BigInteger(idObj.toString()));
-                    }
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return Collections.emptyList();
+        if (BaseUtils.isEmpty(title)) {
+            // 如果搜索关键词为空，返回前10条数据
+            int offset = (page - 1) * pageSize;
+            return goodsMapper.getAllForESPaged(offset, pageSize);
         }
 
-        // 如果没有找到匹配的分类，直接返回空
-        if (categoryIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        // 计算分页偏移量
+        // 1. 计算分页偏移量
         int offset = (page - 1) * pageSize;
 
-        // 构建商品索引的搜索请求
+        // 2. 检查ES是否可用
+        if (!elasticsearchSyncService.isElasticsearchAvailable()) {
+            System.out.println("ES服务不可用");
+            return Collections.emptyList();
+        }
+
+        // 3. 构建商品索引的搜索请求（商品名和分类名匹配）
         List<Goods> goodsList = new ArrayList<>();
         try {
-            SearchRequest goodsSearchRequest = new SearchRequest("goods_index");
+            SearchRequest goodsSearchRequest = new SearchRequest("goods_search_index"); // 使用新的索引
             SearchSourceBuilder goodsSourceBuilder = new SearchSourceBuilder();
 
             BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
-            boolQuery.must(QueryBuilders.termsQuery("categoryId", categoryIds)); // 分类ID过滤
 
-            // 关键词匹配商品标题或分类名，至少匹配一个
-            boolQuery.should(QueryBuilders.matchQuery("title", title));
-            boolQuery.should(QueryBuilders.matchQuery("categoryName", title));
-            boolQuery.minimumShouldMatch(1);
+            // 确保商品未被删除
+            boolQuery.must(QueryBuilders.termQuery("isDeleted", 0));
+
+            // 关键词匹配商品标题、商品名称或分类名，至少匹配一个
+            BoolQueryBuilder keywordQuery = QueryBuilders.boolQuery();
+            keywordQuery.should(QueryBuilders.matchQuery("title", title)); // 商品标题匹配
+            keywordQuery.should(QueryBuilders.matchQuery("goodsName", title)); // 商品名称匹配
+            keywordQuery.should(QueryBuilders.matchQuery("categoryName", title)); // 分类名匹配
+            keywordQuery.minimumShouldMatch(1); // 至少匹配其中一个
+
+            boolQuery.must(keywordQuery);
 
             goodsSourceBuilder.query(boolQuery);
-            goodsSourceBuilder.from(offset);
-            goodsSourceBuilder.size(pageSize);
+            goodsSourceBuilder.from(offset);  // 分页偏移量
+            goodsSourceBuilder.size(pageSize); // 每页数量
 
             goodsSearchRequest.source(goodsSourceBuilder);
 
@@ -130,17 +117,45 @@ public class GoodsService {
 
             ObjectMapper mapper = new ObjectMapper();
             for (SearchHit hit : goodsResponse.getHits()) {
+                // 这里的 hit.getSourceAsMap() 既包含商品信息也包含分类信息
                 Goods goods = mapper.convertValue(hit.getSourceAsMap(), Goods.class);
                 goodsList.add(goods);
             }
         } catch (IOException e) {
             e.printStackTrace();
+            // 如果ES查询失败
+            System.err.println("ES查询失败" + e.getMessage());
             return Collections.emptyList();
         }
 
         return goodsList;
     }
-    // 商品列表
+
+    /**
+     * 数据库降级查询方法
+     */
+//    private List<Goods> fallbackToDatabaseQuery(String title, int page, int pageSize) {
+//        // 获取符合类目的 category_id 列表
+//        List<BigInteger> categoryIds = categoryService.selectIdByTitle(title);
+//
+//        // StringBuilder 拼接 ID 列表
+//        StringBuilder sb = new StringBuilder();
+//        for (int i = 0; i < categoryIds.size(); i++) {
+//            sb.append(categoryIds.get(i));
+//            if (i < categoryIds.size() - 1) {
+//                sb.append(",");  // 逗号分隔
+//            }
+//        }
+//        // 获取拼接字符串-ids
+//        String ids = sb.toString();
+//
+//        int offset = (page - 1) * pageSize;
+//
+//        return goodsMapper.getAll(title, offset, pageSize, ids);
+//    }
+
+
+    // 商品列表 （ 不用ES ）
 //    @ReadOnly
 //    public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
 //        // 获取符合类目的 category_id 列表
@@ -163,6 +178,8 @@ public class GoodsService {
 //
 //        return goodsMapper.getAll(title, offset, pageSize, ids);
 //    }
+//
+
 
 
     // 商品列表(连表方式）
@@ -241,10 +258,16 @@ public class GoodsService {
 
         List<BigInteger> tagIds = new ArrayList<>();
 
-        // 解析标签
-        String[] tags = tagNames.split("\\$");
+        // 解析标签（处理空值情况）
+        if (!BaseUtils.isEmpty(tagNames)) {
+            String[] tags = tagNames.split("\\$");
 
-        for (String tagName : tags) {
+            for (String tagName : tags) {
+                // 跳过空标签名
+                if (BaseUtils.isEmpty(tagName) || tagName.trim().isEmpty()) {
+                    continue;
+                }
+                tagName = tagName.trim();
             Tag tag = tagService.getTagByName(tagName);
             if (tag != null) {
                 tagIds.add(tag.getId());
@@ -260,6 +283,7 @@ public class GoodsService {
                 }
             }
         }
+        } // 结束tagNames非空判断
 
         Goods goods = new Goods();
         goods.setCategoryId(categoryId);
@@ -307,6 +331,13 @@ public class GoodsService {
                 }
                 transactionManager.commit(status);
 
+                // 同步到ES
+                try {
+                    elasticsearchSyncService.syncSingleGoodsToES(id);
+                } catch (Exception e) {
+                    System.err.println("同步商品到ES失败: " + e.getMessage());
+                }
+
                 return id;
 
             } else {
@@ -327,6 +358,14 @@ public class GoodsService {
                 }
                 // 提交事务
                 transactionManager.commit(status);
+
+                // 同步到ES
+                try {
+                    elasticsearchSyncService.syncSingleGoodsToES(goods.getId());
+                } catch (Exception e) {
+                    System.err.println("同步商品到ES失败: " + e.getMessage());
+                }
+
                 return goods.getId();
             }
         }catch(Exception e){
@@ -336,13 +375,15 @@ public class GoodsService {
             }
         }
 
-        // 删除商品
-        public int deleteGoods (BigInteger id){
-            return goodsMapper.delete(id, (int) (System.currentTimeMillis() / 1000));
-        }
 
-        // 商品类目里的所有商品
-        public int deleteCategory (BigInteger id){
-            return goodsMapper.deleteCategory(id, (int) (System.currentTimeMillis() / 1000));
-        }
+    // 删除商品
+    public int deleteGoods (BigInteger id){
+         return goodsMapper.delete(id, (int) (System.currentTimeMillis() / 1000));
+    }
+
+    // 商品类目里的所有商品
+    public int deleteCategory (BigInteger id){
+        return goodsMapper.deleteCategory(id, (int) (System.currentTimeMillis() / 1000));
+    }
+
     }
