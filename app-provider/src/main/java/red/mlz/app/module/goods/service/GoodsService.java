@@ -22,6 +22,7 @@ import red.mlz.app.module.goods_tag_relation.service.GoodsTagRelationService;
 import red.mlz.app.module.tag.service.TagService;
 import red.mlz.common.config.ReadOnly;
 import red.mlz.common.module.goods.dto.GoodsDTO;
+import red.mlz.common.module.goods.dto.GoodsSearchDoc;
 import red.mlz.common.module.goods.entity.Category;
 import red.mlz.common.module.goods.entity.Goods;
 import red.mlz.common.module.goods.request.GoodsContentDto;
@@ -68,21 +69,19 @@ public class GoodsService {
         return goodsMapper.extractById(id);
     }
 
-
-
     @ReadOnly
     public List<Goods> getAllGoodsInfo(String title, int page, int pageSize) {
 
-//        if (BaseUtils.isEmpty(title)) {
-//            // 如果搜索关键词为空，返回前10条数据
-//            int offset = (page - 1) * pageSize;
-//            return goodsMapper.getAllForESPaged(offset, pageSize);
-//        }
+        if (BaseUtils.isEmpty(title)) {
+            // 如果搜索关键词为空，返回前10条数据
+            int offset = (page - 1) * pageSize;
+            return goodsMapper.getAllForESPaged(offset, pageSize);
+        }
 
         // 1. 计算分页偏移量
         int offset = (page - 1) * pageSize;
 
-        // 2. 检查ES是否可用
+        // 2. 检查ES是否可用，不可用则直接降级到数据库查询
         if (!elasticsearchSyncService.isElasticsearchAvailable()) {
             System.out.println("ES服务不可用");
             return Collections.emptyList();
@@ -118,19 +117,43 @@ public class GoodsService {
 
             ObjectMapper mapper = new ObjectMapper();
             for (SearchHit hit : goodsResponse.getHits()) {
-                // 这里的 hit.getSourceAsMap() 既包含商品信息也包含分类信息
-                Goods goods = mapper.convertValue(hit.getSourceAsMap(), Goods.class);
-                goodsList.add(goods);
+                try {
+                    // 先转换为GoodsSearchDoc，再提取Goods字段
+                    GoodsSearchDoc searchDoc = mapper.convertValue(hit.getSourceAsMap(), GoodsSearchDoc.class);
+
+                    // 创建Goods对象并复制基础字段
+                    Goods goods = new Goods();
+                    goods.setId(searchDoc.getId());
+                    goods.setCategoryId(searchDoc.getCategoryId());
+                    goods.setTitle(searchDoc.getTitle());
+                    goods.setGoodsImages(searchDoc.getGoodsImages());
+                    goods.setSales(searchDoc.getSales());
+                    goods.setGoodsName(searchDoc.getGoodsName());
+                    goods.setPrice(searchDoc.getPrice());
+                    goods.setSource(searchDoc.getSource());
+                    goods.setSevenDayReturn(searchDoc.getSevenDayReturn());
+                    goods.setGoodsDetails(searchDoc.getGoodsDetails());
+                    goods.setCreatedTime(searchDoc.getCreatedTime());
+                    goods.setUpdatedTime(searchDoc.getUpdatedTime());
+                    goods.setIsDeleted(searchDoc.getIsDeleted());
+
+                    goodsList.add(goods);
+                } catch (Exception e) {
+                    System.err.println("转换ES搜索结果失败: " + e.getMessage());
+                    e.printStackTrace();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
-            // 如果ES查询失败
             System.err.println("ES查询失败" + e.getMessage());
             return Collections.emptyList();
         }
 
         return goodsList;
     }
+
+
+
 
     /**
      * 数据库降级查询方法
